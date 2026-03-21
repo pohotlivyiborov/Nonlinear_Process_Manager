@@ -1,12 +1,14 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from pydantic_extra_types.coordinate import Longitude, Latitude
+from typing import Annotated
 
 
-class SourcesBase:
+class SourcesBase(BaseModel):
     name: str
     type: str
-    latitude: float
-    longitude: float
-    height: float
+    latitude: Latitude
+    longitude: Longitude
+    height: Annotated[float, Field(gt=0, lt=8000)]
     emission_rate: float
 
 

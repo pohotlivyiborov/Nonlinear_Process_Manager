@@ -13,24 +13,14 @@ class SimulationParamsRepository:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
-    async def update_simulation_params(
+    async def create_simulation_params(
             self,
-            id: int,
             new_simulation_params: SimulationParamsCreate
     ) -> SimulationParams | None:
+        simulation_params_data = new_simulation_params.model_dump()
+        simulation_params = SimulationParams(**simulation_params_data)
 
-        stmt = select(SimulationParams).where(SimulationParams.id == id)
-        result = await self.db.execute(stmt)
-        simulation_params = result.scalars().first()
-
-        if not simulation_params:
-            return None
-
-        update_data = new_simulation_params.model_dump(exclude_unset=True)
-
-        for key, value in update_data.items():
-            setattr(simulation_params, key, value)
-
+        self.db.add(simulation_params)
         await self.db.commit()
         await self.db.refresh(simulation_params)
 

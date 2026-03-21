@@ -11,6 +11,6 @@ class SimulationParamsService:
         result = await self.repository.get_simulation_params()
         return result
 
-    async def update_simulation_params(self, new_simulation_params:SimulationParamsCreate):
-        result = await self.repository.update_simulation_params(new_simulation_params)
+    async def create_simulation_params(self, new_simulation_params:SimulationParamsCreate):
+        result = await self.repository.create_simulation_params(new_simulation_params)
         return result

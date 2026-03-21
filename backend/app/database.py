@@ -1,29 +1,31 @@
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from dotenv import load_dotenv
-import os
+from .core.config import settings
 
-load_dotenv()
 
-'''
-    Константу заменим на postgres потом
-    
-    BASE_DIR И DB_PATH нужны только пока есть sqlite
-'''
+SQLALCHEMY_DATABASE_URL = f'postgresql+asyncpg://{settings.database_username}:{settings.database_password}@' \
+                          f'{settings.database_hostname}:{settings.database_port}/{settings.database_name}'
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(os.path.dirname(BASE_DIR), 'instance', 'h2s_simulation.db')
-SQLALCHEMY_DATABASE_URL = f'sqlite+aiosqlite:///{DB_PATH}'
 
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL)
+"""ECHO TRUE ТОЛЬКО ДЛЯ ДЕВА. УДАЛИТЬ ЕСЛИ БУДЕМ ПУШИТЬ В ДЕПЛОЙ"""
+engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
     pass
 
 
-def get_db():
-    async with SessionLocal as db:
+async def get_db():
+    async with SessionLocal() as db:
         yield db
+
+"""
+    как только будет Alembic - удалить init_model
+"""
+
+
+async def init_models():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
