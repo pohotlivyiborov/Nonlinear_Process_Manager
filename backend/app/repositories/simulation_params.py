@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, Sequence
 from ..models.simulation_params import SimulationParams
-from typing import List
 from ..schemas.simulation_params import SimulationParamsCreate
 
 
@@ -9,7 +8,7 @@ class SimulationParamsRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_simulation_params(self) -> List[SimulationParams]:
+    async def get_simulation_params(self) -> Sequence[SimulationParams]:
         stmt = select(SimulationParams)
         result = await self.db.execute(stmt)
         return result.scalars().all()
@@ -27,7 +26,7 @@ class SimulationParamsRepository:
         if not simulation_params:
             return None
 
-        update_data = new_simulation_params.model_dump()
+        update_data = new_simulation_params.model_dump(exclude_unset=True)
 
         for key, value in update_data.items():
             setattr(simulation_params, key, value)

@@ -9,3 +9,9 @@ class SimulationParamsBase(BaseModel):
 
 class SimulationParamsCreate(SimulationParamsBase):
     pass
+
+
+class SimulationParamsResponse(SimulationParamsBase):
+
+    class Config:
+        from_attributes = True
