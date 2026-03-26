@@ -6,7 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/recommendations.css') }}">
+
     <script src="https://api-maps.yandex.ru/2.1/?apikey={{config.YMAPS_API_KEY}}&lang={{config.YMAPS_LANG}}"></script>
+
+    <!-- ПОДКЛЮЧАЕМ НОВЫЙ ФАЙЛ ГРАФИКИ ЗДЕСЬ -->
+    <script src="{{ url_for('static', path='js/map-graphics.js') }}"></script>
     <script src="{{ url_for('static', path='js/main.js') }}"></script>
 </head>
 <body>
@@ -14,7 +18,6 @@
         <div class="title-container">
             <img src="{{ url_for('static', path='img/logo_white.png') }}" alt="Логотип" width="72" height="48.86">
             <h1 class="site-title">Система моделирования выбросов вредных веществ</h1>
-
         </div>
 
         <nav class="navbar">
@@ -79,7 +82,7 @@
                 </div>
             </div>
 
-            <div id="map" class="map"></div>
+            <div id="map" class="map" data-map-role="monitoring"></div>
 
             <div class="timeline-wrap">
                 <div class="time-ticks">

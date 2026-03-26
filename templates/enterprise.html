@@ -6,10 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/enterprise.css') }}">
-
-    <!-- Подключение Yandex JS API 2.1, модуля тепловых карт и собственного JS-кода-->
     <script src="https://api-maps.yandex.ru/2.1/?apikey={{config.YMAPS_API_KEY}}&lang={{config.YMAPS_LANG}}"></script>
-    <script src="https://yastatic.net/s3/mapsapi-jslibs/heatmap/0.0.1/heatmap.min.js"></script>
+    <script src="{{ url_for('static', path='js/map-graphics.js') }}"></script>
     <script src="{{ url_for('static', path='js/enterprise.js') }}"></script>
 </head>
 <body>
@@ -34,7 +32,11 @@
             <div class="select styled">Сероводород (H₂S) <span class="arrow">▼</span></div>
 
             <h2>Тип источника</h2>
-            <div class="select styled">Точечный источник <span class="arrow">▼</span></div>
+            <select id="source-type" class="select styled" style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; font-size: 14px; background: white;">
+                <option value="point">Точечный (труба)</option>
+                <option value="line">Линейный (дорога/конвейер)</option>
+                <option value="polygon">Площадной (склад/территория)</option>
+            </select>
 
             <h2>Высота, м</h2>
             <input type="text" class="input-pill" id="source-height" value="40" />
@@ -77,20 +79,16 @@
             </div>
 
             <div id="map"></div>
-
-            <!-- Отладочная информация -->
             <div class="debug-info" id="debug-info">
                 Статус: <span id="debug-status">Загрузка...</span>
             </div>
 
-            <!-- Сообщение об ошибке -->
             <div class="error-message" id="error-message">
                 <h3 style="color: red; margin-top: 0;">Ошибка загрузки карты</h3>
                 <p>Проверьте подключение к интернету и API-ключ Яндекс.Карт</p>
                 <button onclick="location.reload()" style="padding: 5px 15px; margin-top: 10px;">Перезагрузить</button>
             </div>
-
-            <!-- Индикатор загрузки -->
++
             <div class="loading-indicator" id="loading-indicator">
                 <div style="font-weight: bold; margin-bottom: 10px;">Расчет рассеивания загрязнений...</div>
                 <div class="progress-bar">
@@ -99,7 +97,6 @@
                 <div id="progress-text" style="font-size: 12px; color: #666;">0%</div>
             </div>
 
-            <!-- Элементы управления тепловой картой -->
             <div class="heatmap-controls">
                 <div class="heatmap-intensity" id="radius-value">Радиус: 100 пикселей</div>
                 <label>
@@ -113,7 +110,6 @@
                 </button>
             </div>
 
-            <!-- Элементы управления ветром -->
             <div class="wind-controls">
                 <div style="font-weight: bold; margin-bottom: 10px; text-align: center;">Настройки ветра</div>
 
@@ -148,7 +144,6 @@
                 <button class="test-button" style="margin-top: 10px; width: 100%;" id="reset-wind-btn">Сбросить ветер</button>
             </div>
 
-            <!-- Легенда для тепловой карты -->
             <div class="legend">
                 <div class="legend-item">
                     <div class="legend-color" style="background-color: rgba(0, 255, 0, 0.3);"></div>
@@ -185,7 +180,6 @@
         </section>
     </main>
 
-    <!-- Модальное окно подтверждения удаления источника -->
     <div id="confirm-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
