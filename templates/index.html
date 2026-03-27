@@ -7,113 +7,128 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/index.css') }}">
 
-    <script src="https://api-maps.yandex.ru/2.1/?apikey={{config.YMAPS_API_KEY}}&lang={{config.YMAPS_LANG}}" type="text/javascript"></script>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey={{config.YMAPS_API_KEY}}&lang={{config.YMAPS_LANG}}"
+            type="text/javascript"></script>
     <script src="{{ url_for('static', path='js/map-graphics.js') }}"></script>
     <script src="{{ url_for('static', path='js/main.js') }}"></script>
 </head>
 <body>
-    <header class="header">
-        <div class="title-container">
-            <img src="{{ url_for('static', path='img/logo_white.png') }}" alt="Логотип" width="72" height="48.86">
-            <h1 class="site-title">Система моделирования выбросов вредных веществ</h1>
+<header class="header">
+    <div class="title-container">
+        <img src="{{ url_for('static', path='img/logo_white.png') }}" alt="Логотип" width="72" height="48.86">
+        <h1 class="site-title">Система моделирования выбросов вредных веществ</h1>
+    </div>
+
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" class="active">Мониторинг</a>
+        <a href="{{ url_for('history') }}">История</a>
+        <a href="{{ url_for('forecasting') }}">Прогнозирование</a>
+        <a href="{{ url_for('recommendations') }}">Рекомендации</a>
+        <a href="{{ url_for('enterprise') }}">Режим предприятия</a>
+        <a href="{{ url_for('login') }}">Авторизация</a>
+    </nav>
+</header>
+<main class="container">
+    <aside class="panel">
+        <h2>Интересующее вещество</h2>
+        <div class="form-row">
+            <select id="substance-select" class="select"
+                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; font-size: 14px; background: white;">
+            </select>
         </div>
 
-        <nav class="navbar">
-            <a href="{{ url_for('index') }}" class="active">Мониторинг</a>
-            <a href="{{ url_for('history') }}">История</a>
-            <a href="{{ url_for('forecasting') }}">Прогнозирование</a>
-            <a href="{{ url_for('recommendations') }}">Рекомендации</a>
-            <a href="{{ url_for('enterprise') }}">Режим предприятия</a>
-            <a href="{{ url_for('login') }}">Авторизация</a>
-        </nav>
-    </header>
-    <main class="container">
-        <aside class="panel">
-            <h2>Интересующее вещество</h2>
-            <div class="form-row">
-                <select class="select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; font-size: 14px; background: white;">
-                    <option>Сероводород (H₂S)</option>
-                </select>
+        <h2>Тип источника</h2>
+        <select id="source-type" class="select styled"
+                style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; font-size: 14px; background: white;">
+            <option value="point">Точечный (труба)</option>
+            <option value="line">Линейный (дорога/конвейер)</option>
+            <option value="polygon">Площадной (склад/территория)</option>
+        </select>
+        <button id="add-source-btn" class="btn" style="margin-bottom: 20px;">Добавить источник на карту</button>
+
+        <!-- Список добавленных источников -->
+        <div id="sources-list" style="margin-bottom: 20px;"></div>
+
+        <h2>Ваше местоположение:</h2>
+        <div class="form-row">
+            <label><input type="checkbox"> Выбрать самостоятельно</label>
+        </div>
+        <button class="btn">Найти меня на карте</button>
+
+        <div class="legend">
+            <h3>Легенда</h3>
+            <div class="row"><span class="swatch ok"></span> Допустимые концентрации</div>
+            <div class="row"><span class="swatch warn"></span> Близкие к ПДК значения</div>
+            <div class="row"><span class="swatch pdq"></span> Значения на уровне ПДК</div>
+            <div class="row"><span class="swatch danger"></span> Превышение ПДК</div>
+        </div>
+
+        <button class="btn" id="toggle-heatmap-btn">Скрыть/Показать загрязнения</button>
+        <button class="btn">Обновить карту</button>
+    </aside>
+
+    <section class="card">
+        <div class="map-header">
+            <div class="map-meta">
+                Ветер: 1,9 м/с, В Давление: 764 мм рт. ст. Влажность: 61% Дальность видимости: 61 км Изотермия: не
+                наблюдается
             </div>
+        </div>
+        <!-- Панель управления погодой -->
+        <div class="weather-controls"
+             style="padding: 10px; background: rgba(255,255,255,0.9); border-radius: 8px; margin-bottom: 10px; display: flex; gap: 10px; justify-content: center;">
+            <button id="toggleWind" class="btn"
+                    style="background: linear-gradient(180deg, #3498db, #2980b9); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;">
+                Ветер: Вкл
+            </button>
+            <button id="togglePrecip" class="btn"
+                    style="background: linear-gradient(180deg, #27ae60, #229954); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;">
+                Осадки: Вкл
+            </button>
+            <button id="updateWeather" class="btn"
+                    style="background: linear-gradient(180deg, #f39c12, #e67e22); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;">
+                Обновить погоду
+            </button>
+        </div>
 
-            <h2>Тип источника</h2>
-            <select id="source-type" class="select styled" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; font-size: 14px; background: white;">
-                <option value="point">Точечный (труба)</option>
-                <option value="line">Линейный (дорога/конвейер)</option>
-                <option value="polygon">Площадной (склад/территория)</option>
-            </select>
-            <button id="add-source-btn" class="btn" style="margin-bottom: 20px;">Добавить источник на карту</button>
+        <div id="map" class="map" data-map-role="monitoring"></div>
 
-            <!-- Список добавленных источников -->
-            <div id="sources-list" style="margin-bottom: 20px;"></div>
-
-            <h2>Ваше местоположение:</h2>
-            <div class="form-row">
-                <label><input type="checkbox"> Выбрать самостоятельно</label>
+        <div class="timeline-wrap">
+            <div class="time-ticks">
+                <span>09:30</span><span>09:40</span><span>09:50</span>
+                <span>10:00</span><span>10:10</span><span>10:20</span>
+                <span>Сейчас</span><span>10:40</span><span>10:50</span>
+                <span>11:00</span><span>11:10</span><span>11:20</span><span>11:30</span>
             </div>
-            <button class="btn">Найти меня на карте</button>
-
-            <div class="legend">
-                <h3>Легенда</h3>
-                <div class="row"><span class="swatch ok"></span> Допустимые концентрации</div>
-                <div class="row"><span class="swatch warn"></span> Близкие к ПДК значения</div>
-                <div class="row"><span class="swatch pdq"></span> Значения на уровне ПДК</div>
-                <div class="row"><span class="swatch danger"></span> Превышение ПДК</div>
-            </div>
-
-            <button class="btn" id="toggle-heatmap-btn">Скрыть/Показать загрязнения</button>
-            <button class="btn">Обновить карту</button>
-        </aside>
-
-        <section class="card">
-            <div class="map-header">
-                <div class="map-meta">
-                    Ветер: 1,9 м/с, В     Давление: 764 мм рт. ст.     Влажность: 61%     Дальность видимости: 61 км     Изотермия: не наблюдается
+            <div class="timeline">
+                <div class="handle">
+                    <div class="triangle"></div>
+                    <div class="dot"></div>
                 </div>
             </div>
-            <!-- Панель управления погодой -->
-            <div class="weather-controls" style="padding: 10px; background: rgba(255,255,255,0.9); border-radius: 8px; margin-bottom: 10px; display: flex; gap: 10px; justify-content: center;">
-                <button id="toggleWind" class="btn" style="background: linear-gradient(180deg, #3498db, #2980b9); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;">
-                    Ветер: Вкл
-                </button>
-                <button id="togglePrecip" class="btn" style="background: linear-gradient(180deg, #27ae60, #229954); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;">
-                    Осадки: Вкл
-                </button>
-                <button id="updateWeather" class="btn" style="background: linear-gradient(180deg, #f39c12, #e67e22); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;">
-                    Обновить погоду
-                </button>
-            </div>
+        </div>
+    </section>
+</main>
 
-            <div id="map" class="map" data-map-role="monitoring"></div>
-
-            <div class="timeline-wrap">
-                <div class="time-ticks">
-                    <span>09:30</span><span>09:40</span><span>09:50</span>
-                    <span>10:00</span><span>10:10</span><span>10:20</span>
-                    <span>Сейчас</span><span>10:40</span><span>10:50</span>
-                    <span>11:00</span><span>11:10</span><span>11:20</span><span>11:30</span>
-                </div>
-                <div class="timeline">
-                    <div class="handle">
-                        <div class="triangle"></div>
-                        <div class="dot"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <div id="confirm-modal" class="modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 300px; border-radius: 8px; text-align: center;">
-            <div class="modal-header">
-                <h3 class="modal-title">Удаление источника</h3>
-            </div>
-            <p>Вы уверены, что хотите удалить этот источник?</p>
-            <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: space-around;">
-                <button class="modal-btn" id="cancel-delete" style="background: #95a5a6; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Отмена</button>
-                <button class="modal-btn" id="confirm-delete" style="background: #e74c3c; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Удалить</button>
-            </div>
+<div id="confirm-modal" class="modal"
+     style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content"
+         style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 300px; border-radius: 8px; text-align: center;">
+        <div class="modal-header">
+            <h3 class="modal-title">Удаление источника</h3>
+        </div>
+        <p>Вы уверены, что хотите удалить этот источник?</p>
+        <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: space-around;">
+            <button class="modal-btn" id="cancel-delete"
+                    style="background: #95a5a6; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
+                Отмена
+            </button>
+            <button class="modal-btn" id="confirm-delete"
+                    style="background: #e74c3c; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
+                Удалить
+            </button>
         </div>
     </div>
+</div>
 </body>
 </html>

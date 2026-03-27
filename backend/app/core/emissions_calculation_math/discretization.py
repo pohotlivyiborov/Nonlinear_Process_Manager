@@ -5,13 +5,15 @@ from backend.app.core.emissions_calculation_math.math_numba import lat_lon_to_me
 
 def discretize_sources(sources_db):
     v_xs, v_ys, v_rates, v_heights = [], [], [], []
-    v_sy0, v_sz0 = [], []  # Массивы для начального расширения
+    v_sy0, v_sz0, v_settling = [], [], []  # Массивы для начального расширения
 
     MAX_POINTS_PER_SOURCE = 200
     MIN_STEP_METERS = 100.0
 
     for s in sources_db:
         s_type_str = s.type.value if hasattr(s.type, 'value') else str(s.type)
+
+        settling_vel = s.pollutant.settling_velocity if hasattr(s, 'pollutant') and s.pollutant else 0.0
 
         if s_type_str == "point" or not s.coordinates:
             mx, my = lat_lon_to_meters_yandex_single(s.latitude, s.longitude)
@@ -21,6 +23,7 @@ def discretize_sources(sources_db):
             v_heights.append(s.height)
             v_sy0.append(0.0)
             v_sz0.append(0.0)
+            v_settling.append(settling_vel)
 
         elif s_type_str == "line":
             coords = s.coordinates
@@ -49,8 +52,9 @@ def discretize_sources(sources_db):
                 v_ys.append(y)
                 v_rates.append(rate_per_point)
                 v_heights.append(s.height)
-                v_sy0.append(step)  # <--- ИЗМЕНЕНИЕ ЗДЕСЬ
+                v_sy0.append(step)
                 v_sz0.append(5.0)
+                v_settling.append(settling_vel)
 
         elif s_type_str == "polygon":
             coords = s.coordinates
@@ -87,12 +91,13 @@ def discretize_sources(sources_db):
                 v_heights.append(s.height)
                 v_sy0.append(dynamic_step)
                 v_sz0.append(5.0)
-
+                v_settling.append(settling_vel)
     return (
         np.array(v_xs, dtype=np.float32),
         np.array(v_ys, dtype=np.float32),
         np.array(v_rates, dtype=np.float32),
         np.array(v_heights, dtype=np.float32),
         np.array(v_sy0, dtype=np.float32),
-        np.array(v_sz0, dtype=np.float32)
+        np.array(v_sz0, dtype=np.float32),
+        np.array(v_settling, dtype=np.float32)
     )

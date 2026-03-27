@@ -26,7 +26,7 @@ def lat_lon_to_meters_yandex_single(lat, lon):
 @njit(fastmath=True, parallel=True)
 def calculate_concentration_chunk(
         x_grid_flat, y_grid_flat, src_xs, src_ys, src_rates, src_heights,
-        src_sy0, src_sz0,
+        src_sy0, src_sz0, src_settling_vel,
         u, base_wind_rad
 ):
     n_pixels = len(x_grid_flat)
@@ -63,6 +63,14 @@ def calculate_concentration_chunk(
 
             Q = src_rates[k] * 1000.0  # Перевод в мг/с
 
+            # ФИЗИКА: Влияние плотности/оседания частиц
+            # Если это тяжелые частицы (PM10), то H со временем уменьшается, и шлейф "падает" на землю
+            time_in_air = dist / max(u, 0.5)
+            effective_height = src_heights[k] - (src_settling_vel[k] * time_in_air)
+            if effective_height < 0:
+                effective_height = 0.0 # Осело на землю
+
+                
             # --- 1. ФИЗИЧНОЕ РАДИАЛЬНОЕ ПЯТНО (PUFF) ---
             # Это диффузия газа против ветра и вокруг трубы. 
             # Зависит от Q, высоты трубы (src_heights) и скорости ветра (u).

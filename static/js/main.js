@@ -9,12 +9,13 @@ let monitoringMap = null;
 const monitoringState = {
     sources: [],
     sourceToDelete: null,
-    isHeatmapVisible: true
+    isHeatmapVisible: true,
+    currentSubstanceId: null // Текущее выбранное вещество
 };
 
 document.addEventListener('DOMContentLoaded', () => {
     const mapContainer = document.getElementById('map');
-   if (mapContainer && mapContainer.dataset.mapRole === 'monitoring') {
+    if (mapContainer && mapContainer.dataset.mapRole === 'monitoring') {
         initMonitoringMap();
     }
 });
@@ -22,14 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
 function initMonitoringMap() {
     if (typeof ymaps === 'undefined') return;
 
-    ymaps.ready(() => {
+    ymaps.ready(async () => {
         monitoringMap = new ymaps.Map('map', {
             center: [55.7558, 37.6173],
             zoom: 13,
             controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
         });
 
-        MapGraphics.initPollutionLayer(monitoringMap);
+        // Сначала грузим вещества
+        await loadSubstances();
+
+        MapGraphics.initPollutionLayer(monitoringMap, monitoringState.currentSubstanceId);
         initMonitoring();
     });
 }
@@ -40,43 +44,61 @@ async function apiCall(url, options = {}) {
             headers: { 'Content-Type': 'application/json', ...options.headers },
             ...options
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // Читаем ответ как текст, чтобы не упасть на пустом теле (204 No Content)
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const text = await response.text();
-
-        // Если текст есть - парсим как JSON, если пусто - просто возвращаем success
         return text ? JSON.parse(text) : { success: true };
-
     } catch (error) {
         console.error('API Error:', error);
         return null;
     }
 }
 
+// ЗАГРУЗКА ВЕЩЕСТВ ИЗ БД
+async function loadSubstances() {
+    const substances = await apiCall('/api/substances'); // Убедитесь, что этот эндпоинт есть в FastAPI
+    const select = document.getElementById('substance-select');
+
+    if (substances && select) {
+        select.innerHTML = '';
+        substances.forEach(sub => {
+            const option = document.createElement('option');
+            option.value = sub.id;
+            option.textContent = `${sub.name} (${sub.short_name})`;
+            select.appendChild(option);
+        });
+
+        if (substances.length > 0) {
+            monitoringState.currentSubstanceId = substances[0].id;
+        }
+
+        select.addEventListener('change', (e) => {
+            monitoringState.currentSubstanceId = parseInt(e.target.value);
+            loadSourcesFromDB(); // Перезагружаем маркеры
+            MapGraphics.refreshPollutionLayer(monitoringMap, monitoringState.currentSubstanceId); // Перерисовываем карту
+        });
+    }
+}
+
 async function loadSourcesFromDB() {
-    const sources = await apiCall('/api/sources');
-    if (sources) {
-        monitoringState.sources = sources.map(source => ({
-            ...source,
-            id: source.id,
-            lat: source.latitude,
-            lng: source.longitude,
-            type: source.type,
-            coordinates: source.coordinates,
-            emissionRate: source.emission_rate
-        }));
+    // Получаем ВСЕ источники (или можно сделать фильтрацию на бэке: /api/sources?substance_id=...)
+    const allSources = await apiCall('/api/sources');
+
+    if (allSources) {
+        // Оставляем только те источники, которые относятся к текущему выбранному веществу
+        monitoringState.sources = allSources
+            .filter(source => source.substance_id === monitoringState.currentSubstanceId)
+            .map(source => ({
+                ...source,
+                id: source.id,
+                lat: source.latitude,
+                lng: source.longitude,
+                type: source.type,
+                coordinates: source.coordinates,
+                emissionRate: source.emission_rate
+            }));
 
         MapGraphics.drawSources(monitoringMap, monitoringState.sources);
-
-
-        // MapGraphics.drawWindVectors(monitoringMap, monitoringState.sources, 180);
-        setTimeout(() => {
-            MapGraphics.refreshPollutionLayer(monitoringMap);
-        }, 100);
+        updateSourcesList();
     }
 }
 
@@ -97,7 +119,11 @@ function setupMonitoringEventListeners() {
     const addSourceBtn = document.getElementById('add-source-btn');
     if (addSourceBtn) {
         addSourceBtn.addEventListener('click', () => {
-            // Выбор типа источника
+            if (!monitoringState.currentSubstanceId) {
+                alert("Сначала выберите или создайте вещество!");
+                return;
+            }
+
             const typeSelect = document.getElementById('source-type');
             const sourceType = typeSelect ? typeSelect.value : 'point';
 
@@ -118,11 +144,13 @@ function setupMonitoringEventListeners() {
                         longitude: centerCoords[1],
                         coordinates: fullCoords,
                         height: heightInput ? parseFloat(heightInput.value) : 40,
-                        emission_rate: rateInput ? parseFloat(rateInput.value) : 3.7
+                        emission_rate: rateInput ? parseFloat(rateInput.value.replace(',', '.')) : 3.7,
+                        substance_id: monitoringState.currentSubstanceId // ПРИВЯЗЫВАЕМ К ВЕЩЕСТВУ
                     });
 
                     addSourceBtn.textContent = 'Добавить источник на карту';
                     loadSourcesFromDB();
+                    MapGraphics.refreshPollutionLayer(monitoringMap, monitoringState.currentSubstanceId);
                 });
             }
         });
@@ -134,7 +162,7 @@ function setupMonitoringEventListeners() {
             monitoringState.isHeatmapVisible = !monitoringState.isHeatmapVisible;
             if (monitoringState.isHeatmapVisible) {
                 monitoringMap.layers.add(MapGraphics.pollutionLayer);
-                MapGraphics.refreshPollutionLayer(monitoringMap);
+                MapGraphics.refreshPollutionLayer(monitoringMap, monitoringState.currentSubstanceId);
             } else {
                 monitoringMap.layers.remove(MapGraphics.pollutionLayer);
             }
@@ -152,7 +180,7 @@ function updateSourcesList() {
     const sourcesList = document.getElementById('sources-list');
     if (!sourcesList) return;
 
-    sourcesList.innerHTML = monitoringState.sources.length === 0 ? '<p style="text-align: center;">Нет источников</p>' : '';
+    sourcesList.innerHTML = monitoringState.sources.length === 0 ? '<p style="text-align: center;">Нет источников для этого вещества</p>' : '';
 
     monitoringState.sources.forEach(source => {
         const sourceEl = document.createElement('div');
@@ -181,6 +209,7 @@ async function confirmDeleteSource() {
     const result = await deleteSourceFromDB(monitoringState.sourceToDelete.id);
     if (result && result.success !== false) {
         await loadSourcesFromDB();
+        MapGraphics.refreshPollutionLayer(monitoringMap, monitoringState.currentSubstanceId);
     }
     const modal = document.getElementById('confirm-modal');
     if (modal) modal.style.display = 'none';
@@ -202,7 +231,7 @@ window.requestDeleteSource = requestDeleteSource;
 window.flyToSource = flyToSource;
 
 // ==========================================
-// АНИМАЦИЯ ПОГОДЫ (Без изменений)
+// АНИМАЦИЯ ПОГОДЫ
 // ==========================================
 let weatherData = { wind_speed: 3, wind_dir: 'n', prec_type: 0, prec_strength: 0 };
 let isWindOn = true;

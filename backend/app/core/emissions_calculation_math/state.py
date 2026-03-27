@@ -7,8 +7,8 @@ class PollutionState:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(PollutionState, cls).__new__(cls)
-            cls._instance.cached_sources = None
-            cls._instance.sources_time = 0
+            cls._instance.cached_sources = {} #substances_id: кэшированные данные
+            cls._instance.sources_time = {} #substances_id: время
             cls._instance.cached_params = None
             cls._instance.params_time = 0
         return cls._instance

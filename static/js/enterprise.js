@@ -4,7 +4,6 @@ window.appConfig = {
     YWEATHER_API_KEY: '{{ config.YWEATHER_API_KEY }}',
 };
 
-// Глобальные переменные
 let map = null;
 let paramsUpdateTimeout = null;
 
@@ -15,7 +14,8 @@ const state = {
     windSpeed: 2.4,
     windDirection: 180,
     stabilityClass: 'D',
-    showWindVectors: true
+    showWindVectors: true,
+    currentSubstanceId: null // Текущее выбранное вещество
 };
 
 window.requestDeleteSource = function(sourceId) {
@@ -45,7 +45,7 @@ window.resetWindSettings = function() {
 };
 
 window.updateHeatmapData = function() {
-    MapGraphics.refreshPollutionLayer(map);
+    MapGraphics.refreshPollutionLayer(map, state.currentSubstanceId);
 };
 
 // --- Работа с API и БД ---
@@ -56,47 +56,67 @@ async function apiCall(url, options = {}) {
             headers: { 'Content-Type': 'application/json', ...options.headers },
             ...options
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const text = await response.text();
         return text ? JSON.parse(text) : { success: true };
-
     } catch (error) {
         console.error('API Error:', error);
         return null;
     }
 }
 
+// Загрузка веществ
+async function loadSubstances() {
+    const substances = await apiCall('/api/substances');
+    const select = document.getElementById('substance-select');
+
+    if (substances && select) {
+        select.innerHTML = '';
+        substances.forEach(sub => {
+            const option = document.createElement('option');
+            option.value = sub.id;
+            option.textContent = `${sub.name} (${sub.short_name})`;
+            select.appendChild(option);
+        });
+
+        if (substances.length > 0) {
+            state.currentSubstanceId = substances[0].id;
+        }
+
+        select.addEventListener('change', (e) => {
+            state.currentSubstanceId = parseInt(e.target.value);
+            loadSourcesFromDB();
+            MapGraphics.refreshPollutionLayer(map, state.currentSubstanceId);
+        });
+    }
+}
+
 async function loadSourcesFromDB() {
-    const sources = await apiCall('/api/sources');
-    if (sources) {
-        state.sources = sources.map(source => ({
-            ...source,
-            id: source.id,
-            lat: source.latitude,
-            lng: source.longitude,
-            emissionRate: source.emission_rate,
-            height: source.height,
-            type: source.type // Важно для MapGraphics
-        }));
+    const allSources = await apiCall('/api/sources');
+    if (allSources) {
+        state.sources = allSources
+            .filter(source => source.substance_id === state.currentSubstanceId)
+            .map(source => ({
+                ...source,
+                id: source.id,
+                lat: source.latitude,
+                lng: source.longitude,
+                emissionRate: source.emission_rate,
+                height: source.height,
+                type: source.type
+            }));
 
         updateSourcesList();
 
-        // Отрисовка через MapGraphics
         MapGraphics.drawSources(map, state.sources);
         if (state.showWindVectors) MapGraphics.drawWindVectors(map, state.sources, state.windDirection);
 
-        MapGraphics.refreshPollutionLayer(map);
+        MapGraphics.refreshPollutionLayer(map, state.currentSubstanceId);
     }
 }
 
 async function addSourceToDB(sourceData) {
-    return await apiCall('/api/sources', {
-        method: 'POST',
-        body: JSON.stringify(sourceData)
-    });
+    return await apiCall('/api/sources', { method: 'POST', body: JSON.stringify(sourceData) });
 }
 
 async function deleteSourceFromDB(sourceId) {
@@ -112,11 +132,11 @@ async function saveSimulationParamsAndRefresh() {
     };
 
     try {
-        const result = await apiCall('/api/simulation_params/', { // Обратите внимание на роут
+        const result = await apiCall('/api/simulation_params/', {
             method: 'POST',
             body: JSON.stringify(paramsData)
         });
-        if (result) MapGraphics.refreshPollutionLayer(map);
+        if (result) MapGraphics.refreshPollutionLayer(map, state.currentSubstanceId);
     } catch (e) {
         console.error("Ошибка сохранения параметров", e);
     }
@@ -138,9 +158,7 @@ function initMap() {
         updateDebugStatus("Карта загружена");
         setTimeout(() => document.getElementById('loading-indicator').style.display = 'none', 500);
 
-        MapGraphics.initPollutionLayer(map);
-
-        init();
+        init(); // Грузим вещества, затем слой, затем источники
     } catch (error) {
         console.error("Ошибка при инициализации карты:", error);
         showErrorMessage("Ошибка загрузки карты: " + error.message);
@@ -190,7 +208,9 @@ function updateSourcesList() {
     });
 }
 
-function init() {
+async function init() {
+    await loadSubstances();
+    MapGraphics.initPollutionLayer(map, state.currentSubstanceId);
     setupEventListeners();
     loadSourcesFromDB();
 }
@@ -232,11 +252,14 @@ function setupEventListeners() {
         });
     }
 
-    // ИНТЕГРАЦИЯ MAPGRAPHICS ДЛЯ КНОПКИ ДОБАВЛЕНИЯ
     const addSourceBtn = document.getElementById('add-source-btn');
     if (addSourceBtn) {
         addSourceBtn.addEventListener('click', () => {
-            // ЧИТАЕМ ТИП ИСТОЧНИКА ИЗ HTML
+            if (!state.currentSubstanceId) {
+                alert("Сначала выберите или создайте вещество!");
+                return;
+            }
+
             const typeSelect = document.getElementById('source-type');
             const sourceType = typeSelect ? typeSelect.value : 'point';
 
@@ -244,7 +267,7 @@ function setupEventListeners() {
                 MapGraphics.disableDrawing(map);
                 addSourceBtn.textContent = 'Добавить источник';
             } else {
-                addSourceBtn.textContent = sourceType === 'point' ? 'Кликните на карту' : 'Рисуйте (Двойной клик - завершить)';
+                addSourceBtn.textContent = sourceType === 'point' ? 'Кликните на карту' : 'Рисуйте (Двойной клик)';
 
                 MapGraphics.enableDrawing(map, sourceType, async (type, centerCoords, fullCoords) => {
                     const heightInput = document.getElementById('source-height');
@@ -259,7 +282,8 @@ function setupEventListeners() {
                         longitude: centerCoords[1],
                         coordinates: fullCoords,
                         height: h,
-                        emission_rate: rate
+                        emission_rate: rate,
+                        substance_id: state.currentSubstanceId
                     });
 
                     addSourceBtn.textContent = 'Добавить источник';
@@ -270,7 +294,7 @@ function setupEventListeners() {
     }
 
     const updateHeatmapBtn = document.getElementById('update-heatmap-btn');
-    if (updateHeatmapBtn) updateHeatmapBtn.addEventListener('click', () => MapGraphics.refreshPollutionLayer(map));
+    if (updateHeatmapBtn) updateHeatmapBtn.addEventListener('click', () => MapGraphics.refreshPollutionLayer(map, state.currentSubstanceId));
 
     document.querySelectorAll('.close').forEach(el => el.addEventListener('click', () => document.getElementById('confirm-modal').style.display = 'none'));
     const cancelDelete = document.getElementById('cancel-delete');
@@ -284,7 +308,10 @@ function setupEventListeners() {
 async function confirmDeleteSource() {
     if (!state.sourceToDelete) return;
     const result = await deleteSourceFromDB(state.sourceToDelete.id);
-    if (result) await loadSourcesFromDB();
+    if (result) {
+        await loadSourcesFromDB();
+        MapGraphics.refreshPollutionLayer(map, state.currentSubstanceId);
+    }
     document.getElementById('confirm-modal').style.display = 'none';
     state.sourceToDelete = null;
 }

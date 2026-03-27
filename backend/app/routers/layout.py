@@ -9,13 +9,14 @@ from ..schemas.simulation_params import SimulationParamsCreate
 router = APIRouter(tags=['simulation'], prefix="/api/simulation")
 
 
-@router.get("/tiles/{z}/{x}/{y}.png")
-async def get_pollution_tile(z: int, x: int, y: int, db: AsyncSession = Depends(get_db)):
+@router.get("/tiles/{substance_id}/{z}/{x}/{y}.png")
+async def get_pollution_tile(substance_id: int, z: int, x: int, y: int, db: AsyncSession = Depends(get_db)):
     service = LayoutService(db)
-    image = await service.render_tile(x, y, z)
+    image = await service.render_tile(substance_id, x, y, z)
     buf = BytesIO()
     image.save(buf, format="PNG")
     return Response(content=buf.getvalue(), media_type="image/png")
+
 
 @router.post("/params", status_code=status.HTTP_201_CREATED)
 async def update_simulation_params(

@@ -11,6 +11,7 @@ class SourcesBase(BaseModel):
     longitude: Longitude
     height: Annotated[float, Field(gt=0, lt=8000)]
     emission_rate: float
+    substance_id: int
     coordinates: Optional[List[List[float]]] = None
 
 

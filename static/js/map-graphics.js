@@ -1,14 +1,15 @@
 window.MapGraphics = {
     pollutionLayer: null,
     windVectors: [],
-    monitoringPolygons: [],
-    sourceGeoObjects: [], // Добавлено для хранения отрисованных источников
-    drawMode: null, // 'point', 'line', 'polygon', null
+    sourceGeoObjects: [],
+    drawMode: null,
     currentGeometry: [],
     tempGeoObject: null,
+    currentSubstanceId: 1, // ID вещества по умолчанию
 
-    initPollutionLayer(map) {
-        const tileUrlTemplate = '/api/simulation/tiles/%z/%x/%y.png?t=' + Date.now();
+    initPollutionLayer(map, substanceId = 1) {
+        this.currentSubstanceId = substanceId;
+        const tileUrlTemplate = `/api/simulation/tiles/${this.currentSubstanceId}/%z/%x/%y.png?t=` + Date.now();
         this.pollutionLayer = new ymaps.Layer(tileUrlTemplate, {
             tileTransparent: true,
             zIndex: 5000,
@@ -18,13 +19,13 @@ window.MapGraphics = {
         map.layers.add(this.pollutionLayer);
     },
 
-    refreshPollutionLayer(map) {
+    refreshPollutionLayer(map, newSubstanceId = null) {
         if (!this.pollutionLayer) return;
+        if (newSubstanceId) this.currentSubstanceId = newSubstanceId;
 
-        // Надежный сброс кэша тайлов Яндекса: удаляем слой и создаем его заново
         map.layers.remove(this.pollutionLayer);
 
-        const tileUrlTemplate = '/api/simulation/tiles/%z/%x/%y.png?t=' + Date.now();
+        const tileUrlTemplate = `/api/simulation/tiles/${this.currentSubstanceId}/%z/%x/%y.png?t=` + Date.now();
         this.pollutionLayer = new ymaps.Layer(tileUrlTemplate, {
             tileTransparent: true,
             zIndex: 5000,
@@ -40,7 +41,6 @@ window.MapGraphics = {
         this.windVectors = [];
 
         sources.forEach(source => {
-            // Вектор ветра рисуем только для точечных источников для визуальной чистоты
             if (source.type !== 'point' && !source.latitude) return;
 
             const plumeDir = (windDirection + 180) % 360;
@@ -61,7 +61,6 @@ window.MapGraphics = {
     },
 
     drawSources(map, sources) {
-        // Очищаем старые объекты с карты
         this.sourceGeoObjects.forEach(obj => map.geoObjects.remove(obj));
         this.sourceGeoObjects = [];
 
@@ -72,14 +71,12 @@ window.MapGraphics = {
             if (source.type === 'point' || !source.coordinates) {
                 geoObj = new ymaps.Placemark([source.lat, source.lng], { balloonContent }, { preset: 'islands#redIcon' });
             } else if (source.type === 'line') {
-                // Темно-синий/графитовый цвет для сохраненных дорог и труб
                 geoObj = new ymaps.Polyline(source.coordinates, { balloonContent }, {
                     strokeColor: '#2c3e50',
                     strokeWidth: 4,
                     strokeOpacity: 0.3
                 });
             } else if (source.type === 'polygon') {
-                // Темная граница и полупрозрачная серо-синяя заливка для сохраненных территорий
                 geoObj = new ymaps.Polygon([source.coordinates], { balloonContent }, {
                     fillColor: '#2c3e50',
                     fillOpacity: 0.3,
@@ -115,22 +112,11 @@ window.MapGraphics = {
                 this.disableDrawing(map);
             }
             else if (type === 'line') {
-                // Ярко-голубой цвет в процессе рисования линии
-                this.tempGeoObject = new ymaps.Polyline(this.currentGeometry, {}, {
-                    strokeColor: '#3498db',
-                    strokeWidth: 4,
-                    strokeOpacity: 0.8
-                });
+                this.tempGeoObject = new ymaps.Polyline(this.currentGeometry, {}, { strokeColor: '#3498db', strokeWidth: 4, strokeOpacity: 0.8 });
                 map.geoObjects.add(this.tempGeoObject);
             }
             else if (type === 'polygon') {
-                // Ярко-голубой цвет в процессе рисования полигона
-                this.tempGeoObject = new ymaps.Polygon([this.currentGeometry], {}, {
-                    fillColor: '#3498db',
-                    fillOpacity: 0.4,
-                    strokeColor: '#2980b9',
-                    strokeWidth: 3
-                });
+                this.tempGeoObject = new ymaps.Polygon([this.currentGeometry], {}, { fillColor: '#3498db', fillOpacity: 0.4, strokeColor: '#2980b9', strokeWidth: 3 });
                 map.geoObjects.add(this.tempGeoObject);
             }
         };
