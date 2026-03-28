@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from .routers import pages, sources_api, simulation_params_api, layout
+from .routers import pages, sources_api, simulation_params_api, layout, substances_api
 from .core.config import STATIC_DIR
 from .database import init_models
 from contextlib import asynccontextmanager
@@ -29,3 +29,4 @@ app.include_router(pages.router)
 app.include_router(sources_api.router)
 app.include_router(simulation_params_api.router)
 app.include_router(layout.router)
+app.include_router(substances_api.router)

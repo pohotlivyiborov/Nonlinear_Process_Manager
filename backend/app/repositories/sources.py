@@ -13,6 +13,12 @@ class SourcesRepository:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
+    async def get_sources_by_substance(self, substance_id: id) -> Sequence[Sources]:
+        stmt = select(Sources).where(Sources.substance_id == substance_id)
+
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
     async def add_source(self, source_schema: SourcesCreate) -> Sources:
         source_data = source_schema.model_dump()
 

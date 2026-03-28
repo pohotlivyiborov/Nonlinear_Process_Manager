@@ -18,3 +18,7 @@ class SourceService:
     async def get_all_sources(self):
         result = await self.repository.get_all_sources()
         return result
+
+    async def get_sources_by_substance(self, substance_id:int):
+        result = await self.repository.get_sources_by_substance(substance_id)
+        return result

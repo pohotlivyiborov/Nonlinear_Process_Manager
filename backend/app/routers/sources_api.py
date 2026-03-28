@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from ..services.source_service import SourceService
+from ..core.emissions_calculation_math.state import pollution_state
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_db
 from ..schemas.sources import SourcesCreate, SourcesResponse
@@ -21,6 +22,10 @@ async def create_source(new_source: SourcesCreate, db: AsyncSession = Depends(ge
     source_service = SourceService(db)
     result = await source_service.add_source(new_source)
     print(result)
+
+    # СБРАСЫВАЕМ КЭШ ПОСЛЕ Добавления ИСТОЧНИКА
+    pollution_state.invalidate_sources()
+
     return result
 
 
@@ -32,5 +37,8 @@ async def delete_source(id: int, db: AsyncSession = Depends(get_db)):
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Пользователь с таким id не существует")
+
+    # СБРАСЫВАЕМ КЭШ ЛЭЙАУТА ПОСЛЕ ДОБАВЛЕНИЯ ИСТОЧНИКА
+    pollution_state.invalidate_sources()
 
     return result
