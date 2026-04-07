@@ -8,5 +8,7 @@ class SimulationParams(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     wind_speed = Column(Float, nullable=False)
     wind_direction = Column(Float, nullable=False) # Тут будет измеряться вградусах
+    temperature = Column(Float, nullable=False)
+    humidity = Column(Float, nullable=False)
     stability_class = Column(String, nullable=False)
     updated_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
