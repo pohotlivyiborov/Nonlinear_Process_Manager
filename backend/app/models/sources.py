@@ -1,4 +1,4 @@
-from ..database import Base
+from .base import Base
 from sqlalchemy import Column, String, Integer, func, TIMESTAMP, Float, JSON, ForeignKey, SmallInteger, Enum as SQLEnum
 from enum import Enum
 from sqlalchemy.orm import relationship
@@ -23,5 +23,5 @@ class Sources(Base):
     substance_id = Column(SmallInteger, ForeignKey("substances.id", ondelete="CASCADE"), nullable=False)
     substance = relationship("Substances", lazy="selectin")
     coordinates = Column(JSON, nullable=False)
-    created_at = Column(TIMESTAMP, server_default=func.now(), index=True)
+    created_at = Column(TIMESTAMP, server_default=func.now(), index=True, nullable=False)
 

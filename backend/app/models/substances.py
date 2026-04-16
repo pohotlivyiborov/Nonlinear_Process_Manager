@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, SmallInteger, Float
-from ..database import Base
+from .base import Base
 
 
 class Substances(Base):
