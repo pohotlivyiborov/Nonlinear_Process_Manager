@@ -33,6 +33,7 @@ class Settings(BaseSettings):
             "YWEATHER_API_KEY": self.yweather_api_key,
         }
 
+
 try:
     settings = Settings()
 except Exception as e:

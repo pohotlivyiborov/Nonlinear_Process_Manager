@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from .routers import pages, sources_api, simulation_params_api, layout, substances_api
+from .routers import pages, sources_api, simulation_params_api, layout, substances_api, users, auth
 from .core.config import STATIC_DIR
 
 app = FastAPI()
@@ -12,3 +12,5 @@ app.include_router(sources_api.router)
 app.include_router(simulation_params_api.router)
 app.include_router(layout.router)
 app.include_router(substances_api.router)
+app.include_router(users.router)
+app.include_router(auth.router)
