@@ -30,4 +30,4 @@ class Users(Base):
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     group: Mapped[list] = mapped_column(JSON, nullable=False)
 
-    scenarios: Mapped[list["Scenarios"]] = relationship(back_populates="user")
+    scenario: Mapped[list["Scenarios"]] = relationship(back_populates="user")

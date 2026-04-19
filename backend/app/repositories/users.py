@@ -1,6 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from ..models.users import Users
+from typing import Sequence
+
+from ..models.users import Users, RolesTypesEnum
 from ..schemas.users import UserCreate
 
 
@@ -45,4 +47,14 @@ class UserRepository:
 
         return True
 
+    async def get_students_in_groups(self, groups: list[str]) -> Sequence[Users]:
+        """
+            Здесь мы получим список студентов, у которых есть общая группа с другим пользователем
+            Используется только для профессоров, для получения ими доступа к данным их студентов
+        """
+        stmt = select(Users).where(Users.role == RolesTypesEnum.student)
+        result = await self.db.execute(stmt)
+        students = result.scalars().all()
 
+        professor_groups = set(groups)
+        return [student for student in students if professor_groups.intersection(student.group)]

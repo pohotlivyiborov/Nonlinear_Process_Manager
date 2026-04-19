@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from datetime import datetime, timezone
-
+from fastapi import HTTPException, status
 from ..repositories.users import UserRepository
 from ..core.utils import verify
 from ..core.auth import (create_access_token,
@@ -11,6 +11,10 @@ from ..core.auth import (create_access_token,
                          validate_token_type)
 from ..schemas.tokens import Token
 
+
+"""
+    Убрать вызовы HTTPResponses когда сделаю кастомные исключениzя
+"""
 
 class AuthService:
     def __init__(self, db: AsyncSession):
@@ -50,12 +54,16 @@ class AuthService:
         user_id = payload.get("user_id")
 
         if not user_id:
-            return None
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Invalid credentials",
+                                headers={"WWW-Authenticate": "Bearer"})
 
         user = await self.repository.get_by_id(user_id)
 
         if not user:
-            return None
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Invalid credentials",
+                                headers={"WWW-Authenticate": "Bearer"})
 
         access_token_data = {"user_id": user.id,
                              "user_role": user.role,

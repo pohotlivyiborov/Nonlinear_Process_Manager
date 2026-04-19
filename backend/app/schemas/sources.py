@@ -12,12 +12,11 @@ class SourcesBase(BaseModel):
     height: Annotated[float, Field(gt=0, lt=8000)]
     emission_rate: float
     substance_id: int
+    scenario_id: int
     coordinates: Optional[List[List[float]]] = None
 
 
 class SourcesResponse(SourcesBase):
-    id: int
-
     class Config:
         from_attributes = True
 

@@ -10,7 +10,7 @@ from .config import settings
 
 from ..database import get_db
 from ..schemas.tokens import TokenData
-from ..models.users import Users
+from ..models.users import Users, RolesTypesEnum
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -107,8 +107,22 @@ async def get_current_user(payload: dict = Depends(get_current_token_payload),
 
 async def get_current_user_for_refresh(payload: dict = Depends(get_current_token_payload),
                                        token: str = Depends(oauth2_scheme),
-                                       db: AsyncSession = Depends(get_db),):
+                                       db: AsyncSession = Depends(get_db), ):
     validate_token_type(payload, REFRESH_TOKEN_TYPE)
     return await get_user_by_token(token, db)
 
 
+def require_roles(*roles: RolesTypesEnum):
+    async def check_role(current_user: Users = Depends(get_current_user)):
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Недостаточно прав"
+            )
+        return current_user
+
+    return check_role
+
+
+def require_admin():
+    return require_roles(RolesTypesEnum.admin)
