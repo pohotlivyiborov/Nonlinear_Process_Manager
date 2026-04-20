@@ -23,7 +23,7 @@ class SourceService:
         if not scenario:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail="Scenario not found")
-        
+
         if scenario.user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -35,7 +35,7 @@ class SourceService:
         result = await self.repository.add_source(source_schema)
         return result
 
-    async def delete_source(self, source_id: int, current_user:Users):
+    async def delete_source(self, source_id: int, current_user: Users):
         source = await self.repository.get_source_by_id(source_id)
         if not source:
             raise HTTPException(
@@ -57,3 +57,6 @@ class SourceService:
         result = await self.repository.get_sources_by_substance(substance_id)
         return [source for source in result if source.scenario_id in
                 {scenario.id for scenario in await self.scenario_repository.get_scenario_by_user_id(current_user.id)}]
+
+    async def get_sources_by_substance_internal(self, substance_id: int):
+        return await self.repository.get_sources_by_substance_internal(substance_id)

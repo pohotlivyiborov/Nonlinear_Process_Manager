@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 from pydantic_extra_types.coordinate import Longitude, Latitude
 from typing import Annotated, Optional, List
+from datetime import datetime
+
 from ..models.sources import SourceTypeEnum
 
 
@@ -16,10 +18,13 @@ class SourcesBase(BaseModel):
     coordinates: Optional[List[List[float]]] = None
 
 
-class SourcesResponse(SourcesBase):
-    class Config:
-        from_attributes = True
-
-
 class SourcesCreate(SourcesBase):
     pass
+
+
+class SourcesResponse(SourcesBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

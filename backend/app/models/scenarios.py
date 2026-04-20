@@ -20,5 +20,7 @@ class Scenarios(Base):
                                          index=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
 
-    source: Mapped[list["Sources"]] = relationship(back_populates="scenario")
+    source: Mapped[list["Sources"]] = relationship(back_populates="scenario",
+                                                   cascade="all, delete-orphan",
+                                                   passive_deletes=True)
     user: Mapped["Users"] = relationship(back_populates="scenario")

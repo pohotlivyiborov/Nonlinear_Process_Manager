@@ -8,6 +8,7 @@ class ScenariosBase(BaseModel):
 
 
 class ScenariosResponse(ScenariosBase):
+    id: int
     user: UserForScenarioInfo
     created_at: datetime
 

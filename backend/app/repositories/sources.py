@@ -52,3 +52,8 @@ class SourcesRepository:
         stmt = select(Sources).where(Sources.id == source_id)
         result = await self.db.execute(stmt)
         return result.scalars().first()
+
+    async def get_sources_by_substance_internal(self, substance_id: int) -> Sequence[Sources]:
+        stmt = select(Sources).where(Sources.substance_id == substance_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()

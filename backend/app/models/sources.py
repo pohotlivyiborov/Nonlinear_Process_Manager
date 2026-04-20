@@ -49,5 +49,5 @@ class Sources(Base):
                                                  index=True,
                                                  nullable=False)
 
-    scenario: Mapped["Scenarios"] = relationship(back_populates="source")
+    scenario: Mapped["Scenarios"] = relationship(back_populates="source", passive_deletes=True)
     substance: Mapped["Substances"] = relationship(back_populates="source")
