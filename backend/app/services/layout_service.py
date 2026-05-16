@@ -136,6 +136,10 @@ class LayoutService:
             wind_direction: float = 180.0,
             temperature: float = 20.0,  # °C
             pressure: float = 1013.0,  # гПа
+
+            # Вот твои параметры, Илюха, если нужно будет их как-то обрабатывать, то лучше приватными методами выше
+            sun_brightness: float = 20000,
+            cloud_density: int = 0
     ) -> Image.Image:
 
         if tz < 11:
