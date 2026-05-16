@@ -267,6 +267,18 @@
                                    step="1" value="1013">
                             <span id="pressure-value">1013</span>
                         </div>
+                        <!-- Вот эти блоки теперь отдельные -->
+                        <div class="form-group">
+                            <label>Яркость солнца (люксы)</label>
+                            <input type="range" id="sun-brightness" min="0" max="120000" step="500" value="20000">
+                            <span id="sun-brightness-value">20000</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Облачность (окты, 0–8)</label>
+                            <input type="range" id="cloud-density" min="0" max="8" step="1" value="0">
+                            <span id="cloud-density-value">0</span>
+                        </div>
+                        <!-- конец новых блоков -->
                         <div class="form-group">
                             <label>Направление ветра</label>
                             <select id="wind-direction">

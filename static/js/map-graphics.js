@@ -10,7 +10,9 @@ window.MapGraphics = {
         wind_speed:     3.0,
         wind_direction: 180.0,
         temperature:    20.0,
-        pressure:       1013.0
+        pressure:       1013.0,
+        sun_brightness: 20000,   // добавлено
+        cloud_density:  0        // добавлено
     },
 
     _buildTileUrlTemplate: function() {
@@ -26,6 +28,8 @@ window.MapGraphics = {
                '&wind_direction=' + wp.wind_direction +
                '&temperature='    + wp.temperature +
                '&pressure='       + wp.pressure +
+               '&sun_brightness=' + wp.sun_brightness +   // добавлено
+               '&cloud_density='  + wp.cloud_density  +   // добавлено
                '&t='              + ts;
     },
 
@@ -34,6 +38,8 @@ window.MapGraphics = {
         if (params.wind_direction !== undefined) this.weatherParams.wind_direction = params.wind_direction;
         if (params.temperature    !== undefined) this.weatherParams.temperature    = params.temperature;
         if (params.pressure       !== undefined) this.weatherParams.pressure       = params.pressure;
+        if (params.sun_brightness !== undefined) this.weatherParams.sun_brightness = params.sun_brightness; // добавлено
+        if (params.cloud_density  !== undefined) this.weatherParams.cloud_density  = params.cloud_density;   // добавлено
     },
 
     refreshPollutionLayer: function(map, newSubstanceId, newScenarioId, weatherParams) {

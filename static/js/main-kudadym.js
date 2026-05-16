@@ -151,26 +151,28 @@ function applyWeatherToBackend() {
     var windDir   = parseFloat((el('wind-direction') || {value: 180}).value);
     var temp      = parseFloat((el('temperature')    || {value: 20}).value);
     var pressure  = parseFloat((el('pressure')       || {value: 1013}).value);
+    var sunBright = parseFloat((el('sun-brightness') || {value: 20000}).value); // добавлено
+    var cloudDens = parseInt(  (el('cloud-density')  || {value: 0}).value, 10);  // добавлено
 
     var params = {
         wind_speed:     windSpeed,
         wind_direction: windDir,
         temperature:    temp,
-        pressure:       pressure
+        pressure:       pressure,
+        sun_brightness: sunBright,   // добавлено
+        cloud_density:  cloudDens    // добавлено
     };
 
     console.log('Применяю погоду к тайлам:', params);
 
     if (monitoringMap && window.MapGraphics && appState.currentScenarioId) {
-        // Передаём параметры прямо в MapGraphics — они попадут в URL тайла
         MapGraphics.refreshPollutionLayer(
             monitoringMap,
             appState.currentSubstanceId,
             appState.currentScenarioId,
-            params   // <-- погода уходит в query-параметры тайлового запроса
+            params
         );
 
-        // Нарисовать векторы ветра на карте
         if (MapGraphics.drawWindVectors && appState.sources.length > 0) {
             MapGraphics.drawWindVectors(monitoringMap, appState.sources, windDir);
         }
@@ -461,7 +463,6 @@ function showLogoutBlock() {
     var userLabel   = el('user-info-label');
     if (!logoutBlock) return;
 
-    // Декодируем имя из токена
     var name = 'Пользователь';
     try {
         var token = getToken();
@@ -505,12 +506,10 @@ function initAuthForms() {
         clearAuthErrors();
     });
 
-    // Переключение UI групп при смене роли
     if (roleEl) {
         roleEl.addEventListener('change', function() {
             updateGroupsUIForRole(roleEl.value);
         });
-        // Инициализировать при загрузке
         updateGroupsUIForRole(roleEl.value);
     }
 
@@ -543,19 +542,15 @@ function updateGroupsUIForRole(role) {
     var groupsLabel = el('groups-label');
     var groupsBlock = el('groups-block');
 
-    // Студент: одна группа, кнопку "добавить" скрыть
-    // Преподаватель: несколько групп, кнопку "добавить" показать
     if (role === 'professor') {
         if (addGrpBtn)   addGrpBtn.style.display   = 'block';
         if (groupsLabel) groupsLabel.innerHTML =
             'Группы для ведения <span class="optional">(необязательно)</span>';
     } else {
-        // student: одна группа — убрать лишние строки если были добавлены
         if (addGrpBtn) addGrpBtn.style.display = 'none';
         if (groupsLabel) groupsLabel.innerHTML =
             'Группа <span class="required">*</span>';
 
-        // Оставить только одну строку
         var container = el('groups-container');
         if (container) {
             var rows = container.querySelectorAll('.group-row');
@@ -566,7 +561,6 @@ function updateGroupsUIForRole(role) {
     }
 }
 
-
 function handleLogout() {
     if (!confirm('Выйти из аккаунта?')) return;
 
@@ -575,7 +569,6 @@ function handleLogout() {
     appState.currentScenarioId = null;
     appState.sources = [];
 
-    // Сбросить UI
     var overlay   = el('scenario-overlay');
     var scenBlock = el('scenarios-block');
     var srcList   = el('sources-list');
@@ -589,7 +582,6 @@ function handleLogout() {
     if (backBtn)   backBtn.style.display   = 'none';
     if (scenBlock) scenBlock.style.display = 'none';
 
-    // Показать форму входа
     if (fl) fl.style.display = 'block';
     if (fr) fr.style.display = 'none';
     if (loginBlock) loginBlock.style.display = 'block';
@@ -651,14 +643,12 @@ function handleRegister() {
     var roleEl     = el('reg-role');
     var role       = roleEl ? roleEl.value : 'student';
 
-    // Собрать группы
     var groups = [];
     document.querySelectorAll('.group-input').forEach(function(inp) {
         var v = inp.value.trim();
         if (v) groups.push(v);
     });
 
-    // Валидация
     if (!firstName || !lastName) {
         showAuthError(errEl, 'Введите имя и фамилию'); return;
     }
@@ -672,7 +662,6 @@ function handleRegister() {
         showAuthError(errEl, 'Пароли не совпадают'); return;
     }
 
-    // Для студента группа обязательна и ровно одна
     if (role === 'student') {
         if (groups.length === 0) {
             showAuthError(errEl, 'Укажите вашу группу'); return;
@@ -682,12 +671,9 @@ function handleRegister() {
         }
     }
 
-    // Для преподавателя группа не обязательна (он может вести несколько или ни одной)
     if (groups.length === 0) {
-        // Заполним пустым массивом — бэкенд требует непустой, добавим заглушку
-        // Нет, лучше явно проверим что хотя бы одна группа указана
         if (role === 'professor') {
-            groups = [''];   // разрешено — бэкенд может принять
+            groups = [''];
         }
     }
 
@@ -709,7 +695,6 @@ function handleRegister() {
             return;
         }
 
-        // Автовход после регистрации
         return apiLogin(email, password).then(function(tokenData) {
             if (tokenData && tokenData.access_token) {
                 setToken(tokenData.access_token);
@@ -800,7 +785,6 @@ function onOpenScenarios() {
                     '<button class="sc-delete-btn" title="Удалить">🗑️</button>' +
                 '</div>';
 
-            // IIFE чтобы избежать дублирования обработчиков
             (function(scenario, itemEl) {
                 itemEl.querySelector('.sc-open-btn').addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -873,24 +857,19 @@ function openScenario(sc) {
     appState.currentScenarioId   = sc.id;
     appState.currentScenarioName = sc.name;
 
-    // Заголовок оверлея
     var nameEl = el('scenario-name');
     if (nameEl) nameEl.textContent = sc.name;
 
-    // Показать правую панель
     var overlay = el('scenario-overlay');
     if (overlay) overlay.style.display = 'flex';
 
-    // Раскрыть первую секцию
     var firstSection = document.querySelector('#scenario-overlay .collapse-section');
     if (firstSection && !firstSection.classList.contains('expanded')) {
         firstSection.classList.add('expanded');
     }
 
-    // Левая панель: показать источники
     showSourcesView();
 
-    // Отрисовать тайловый слой выбросов
     if (monitoringMap && window.MapGraphics) {
         MapGraphics.refreshPollutionLayer(
             monitoringMap,
@@ -899,7 +878,6 @@ function openScenario(sc) {
         );
     }
 
-    // Загрузить источники
     loadSourcesForCurrentScenario();
 }
 
@@ -1206,18 +1184,42 @@ function initOverlaySourceHandlers() {
 
 // ── Погода ────────────────────────────────────────────────────
 function initWeatherHandlers() {
+    // Вспомогательная функция для остальных слайдеров
     function bindSlider(sliderId, valueId, fmt) {
-        var s = el(sliderId); var v = el(valueId);
-        if (s && v) s.addEventListener('input', function() {
-            v.textContent = fmt ? fmt(s.value) : s.value;
-        });
+        var s = el(sliderId);
+        var v = el(valueId);
+        if (s && v) {
+            s.addEventListener('input', function() {
+                v.textContent = fmt ? fmt(s.value) : s.value;
+            });
+        }
     }
-    bindSlider('wind-speed',  'wind-speed-value',
-        function(v) { return parseFloat(v).toFixed(1); });
+
+    // Старые слайдеры (работают как раньше)
+    bindSlider('wind-speed', 'wind-speed-value', function(v) { return parseFloat(v).toFixed(1); });
     bindSlider('temperature', 'temperature-value');
-    bindSlider('pressure',    'pressure-value');
+    bindSlider('pressure', 'pressure-value');
     bindSlider('calc-radius', 'calc-radius-value');
 
+    // Яркость солнца – прямая привязка
+    var sunSlider = el('sun-brightness');
+    var sunValue  = el('sun-brightness-value');
+    if (sunSlider && sunValue) {
+        sunSlider.addEventListener('input', function() {
+            sunValue.textContent = this.value;
+        });
+    }
+
+    // Облачность – прямая привязка
+    var cloudSlider = el('cloud-density');
+    var cloudValue  = el('cloud-density-value');
+    if (cloudSlider && cloudValue) {
+        cloudSlider.addEventListener('input', function() {
+            cloudValue.textContent = this.value;
+        });
+    }
+
+    // Направление ветра и компас (без изменений)
     var windDir = el('wind-direction');
     var compass = el('compass-arrow');
     if (windDir && compass) {
@@ -1228,17 +1230,19 @@ function initWeatherHandlers() {
         rotate();
     }
 
+    // Кнопка «Применить и пересчитать»
     var applyBtn = el('apply-weather-btn');
     if (applyBtn) {
         applyBtn.addEventListener('click', function() {
             if (!appState.currentScenarioId) {
-                alert('Сначала откройте сценарий'); return;
+                alert('Сначала откройте сценарий');
+                return;
             }
-            applyBtn.disabled    = true;
+            applyBtn.disabled = true;
             applyBtn.textContent = 'Применяю…';
             applyWeatherToBackend();
             setTimeout(function() {
-                applyBtn.disabled    = false;
+                applyBtn.disabled = false;
                 applyBtn.textContent = 'Применить и пересчитать';
             }, 500);
         });
